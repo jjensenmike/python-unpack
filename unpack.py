@@ -102,16 +102,17 @@ def flatten_folder(base_dir):
 def get_new_name(fname):
 	if not os.path.exists(fname):
 		return fname
-	count = 1
 	if fname.find(".") < 0 or fname.rfind(".") < (len(fname) - 5):
 		is_dir = True
 	else:
 		is_dir = False
+	count = 1
 	while True:
 		count_val = "(" + str(count) + ")"
 		if is_dir:
 			temp_name = fname + count_val
 		else:
-			temp_name = fname[:fname.rfind(".")] + count_val + fname[fname.rfind(".")+1:]
+			temp_name = fname[:fname.rfind(".")] + count_val + fname[fname.rfind("."):]
 		if not os.path.exists(temp_name):
 			return temp_name
+		count += 1
