@@ -7,30 +7,52 @@ from rarfile import RarFile
 from zipfile import ZipFile
 import tarfile
 
+def unpack(file_name, extract_path=None):
 
-def unpack(file_name, extract_path):
-	self.extract_path = extract_path
+	dirname, basename = os.path.split(os.path.abspath(file_name))
+	is_dir = os.path.isdir(file_name)
+	is_file = os.path.isfile(file_name)
 
-	if os.path.exists(file_name) and self.extract_path and not os.path.exists(self.extract_path):
-		os.makedirs(self.extract_path)
-
-	if os.path.isdir(file_name) and self.extract_path:
-		shutil.copytree(file_name, self.extract_path)
-		file_name = self.extract_path
-	elif os.path.isfile(file_name) and self.extract_path:
-		shutil.copy(file_name, self.extract_path)
-		file_name = self.extract_path
-	elif os.path.isdir(file_name):
-		self.extract_path = file_name
+	if not extract_path and is_dir:
+		unpack_dir(file_name)
+	elif not extract_path and is_file:
+		unpack_file(file_name)
+	elif file_dir_name == extract_path and is_dir:
+		unpack_dir(file_name)
+	elif file_dir_name == extract_path and is_file:
+		unpack_file(file_name)
 	else:
-		self.extract_path = os.getcwd()
+		if not os.path.exists(extract_path):
+			os.makedirs(extract_path)
+		if is_dir:
+			shutil.copytree(file_name, extract_path)
+			unpack_dir(extract_path + "/" + basename)
+		elif is_file:
+			shutil.copy(file_name, extract_path)
+			unpack_file(extract_path + "/" + basename)
 
-	if os.path.isdir(file_name):
-		self.unpack_dir(file_name)
-	else:
-		self.unpack_file(file_name)
+def unpack_dir(directory):
+	for root, dirs, dirfiles in os.walk(directory):
+		for name in dirfiles:
+			full_name = root + "/" + name
+			unpack_file(full_name)
 
-def decompress(self, fname):
+def unpack_file(fname):
+	if ft.is_compression(fname) or ft.is_archived(fname):	
+		if ft.is_compression(fname):
+			new_file = decompress(fname)
+		elif ft.is_archived(fname):
+			new_file = unarchive(fname)
+	
+		if fname != new_file:
+			os.remove(fname)
+		
+		if os.path.isdir(new_file):
+			unpack_dir(new_file)
+		else:
+			unpack_file(new_file)
+		
+def decompress(fname):
 	ftype = ft.get_type(fname)
 	
 	if ftype == "gz":
@@ -39,17 +61,18 @@ def decompress(self, fname):
 		ext = BZ2File(fname, 'rb')
 
 	filedata = ext.read()
-	new_name = fname[:fname.rfind(".")]
+	new_name = get_new_name(fname[:fname.rfind(".")])
 	w = open(new_name, "w")
 	w.write(filedata)
 
 	new_type = ft.get_type(new_name)
 	if new_type:
-		os.rename(new_name, new_name + "." + new_type)
-		return new_name + "." + new_type
+		new_plus_type = get_new_name(new_name + "." + new_type)
+		os.rename(new_name, new_plus_type)
+		return new_plus_type
 	return new_name
 
-def unarchive(self, fname):
+def unarchive(fname):
 	ftype = ft.get_type(fname)
 	
 	if ftype == "rar":
@@ -59,50 +82,36 @@ def unarchive(self, fname):
 	elif ftype == "zip":
 		ext = ZipFile(fname)
 
-	new_path = fname[:fname.rfind(".")] + "_extracted"
+	new_path = get_new_name(fname[:fname.rfind(".")] + "_extracted")
 	if not os.path.exists(new_path):
 		os.makedirs(new_path)
 	ext.extractall(path=new_path)
 	return new_path
 
-def unpack_dir(self, directory):
-	for root, dirs, dirfiles in os.walk(directory):
-		for name in dirfiles:
-			full_name = root + "/" + name
-			self.unpack_file(full_name)
-
-def unpack_file(self, fname):
-	if ft.is_compression(fname) or ft.is_archived(fname):
-		
-		if ft.is_compression(fname):
-			new_file = self.decompress(fname)
-		elif ft.is_archived(fname):
-			new_file = self.unarchive(fname)
+def flatten_folder(base_dir):
 	
-		if fname != new_file:
-			os.remove(fname)
-		
-		if os.path.isdir(new_file):
-			self.unpack_dir(new_file)
-		else:
-			self.unpack_file(new_file)
-
-def flatten_folder(self):
-	
-	try:
-		if self.extract_path == os.getcwd():
-			raise SameDirError
-	except SameDirError:
-		raise
-		
-	for root, dirs, files in os.walk(self.extract_path):
-		if root != self.extract_path:
+	for root, dirs, files in os.walk(base_dir):
+		if root != base_dir:
 			for name in files:
-				shutil.move(root + "/" + name, self.extract_path + "/" + name)
-	for root, dirs, files in os.walk(self.extract_path):
+				new_name = get_new_name(base_dir + "/" + name)
+				shutil.move(root + "/" + name, new_name)
+	for root, dirs, files in os.walk(base_dir):
 		for d in dirs:
 			shutil.rmtree(os.path.join(root, d))
-		
-if __name__ == '__main__':
-	unpack = Unpack("test.zip", "test_unpack")
-	unpack.flatten_folder()
+
+def get_new_name(fname):
+	if not os.path.exists(fname):
+		return fname
+	count = 1
+	if fname.find(".") < 0 or fname.rfind(".") < (len(fname) - 5):
+		is_dir = True
+	else:
+		is_dir = False
+	while True:
+		count_val = "(" + str(count) + ")"
+		if is_dir:
+			temp_name = fname + count_val
+		else:
+			temp_name = fname[:fname.rfind(".")] + count_val + fname[fname.rfind(".")+1:]
+		if not os.path.exists(temp_name):
+			return temp_name
