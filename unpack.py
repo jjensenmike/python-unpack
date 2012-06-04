@@ -62,8 +62,8 @@ def decompress(fname):
 
 	filedata = ext.read()
 	new_name = get_new_name(fname[:fname.rfind(".")])
-	w = open(new_name, "w")
-	w.write(filedata)
+	with open(new_name, "w") as w:
+		w.write(filedata)
 
 	new_type = ft.get_type(new_name)
 	if new_type:
