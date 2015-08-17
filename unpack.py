@@ -25,12 +25,13 @@ def unpack(file_name, extract_path=None):
     else:
         if not os.path.exists(extract_path):
             os.makedirs(extract_path)
+        full_extract_path = '{}/{}'.format(extract_path, basename)
         if is_dir:
-            shutil.copytree(file_name, extract_path)
-            unpack_dir('{}/{}'.format(extract_path, basename))
+            shutil.copytree(file_name, full_extract_path)
+            unpack_dir(full_extract_path)
         elif is_file:
             shutil.copy(file_name, extract_path)
-            unpack_file('{}/{}'.format(extract_path, basename))
+            unpack_file(full_extract_path)
 
 
 def unpack_dir(directory):
